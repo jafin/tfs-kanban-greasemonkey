@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name       TFS Task Board Enhancements
 // @namespace  jafin
-// @version    0.10
-// @description  Adds dynamic colouring to tfs tasks based on tags
+// @version    0.2
+// @description  Adds dynamic colouring to TFS tasks based on tags
 // @include    http://*/tfs*board
 // @grant       none
 // ==/UserScript==
@@ -40,9 +40,10 @@ function updateTasks() {
             }
         });
 
+        enhancedModel.swimlanes[swimlane] = lanePoints;
+
         //update column points
         var selector = 'div.points-total:eq(' + swimlane + ')';
-        console.log('updating column points.');
         if ($('div.points-total').length == 0) {
             //tfs deleted our columns or they just don't exist yet..
             $('div.member-header-content').append('<div class="points-total"></div>');
@@ -62,13 +63,19 @@ function updateTasks() {
         });
 
     //Points todo.
-    $("div.board-tile").each(function () {
-        var $this = $(this);
-        var text = $("div.value", $this).text();
-        if (isNumber(text)) {
-            enhancedModel.storyPointsTotal += parseInt(text);
+    for (var key in enhancedModel.swimlanes) {
+        if (key == enhancedModel.backlogColumnKey)
+        {
+            continue;
         }
-    });
+            
+        if (isNumber(enhancedModel.swimlanes[key]))
+        {
+            var num = parseInt(enhancedModel.swimlanes[key]);
+            enhancedModel.storyPointsTotal += num;
+        }
+    }
+
 
     $("div.board-tile").each(function () {
         var $this = $(this);
@@ -84,14 +91,6 @@ function updateTasks() {
                 $this.parent().addClass('board-tile-defect');
             }
         });
-
-
-        if (/DEFECT/i.test(titleText)) {
-            console.log('defect found');
-            $this.addClass('board-tile-defect');
-        } else {
-            $this.addClass('witTypeDevelopment');
-        }
     });
 
     $('#storyPointsContainer').html('Story points total: ' + '<span class="points">' + enhancedModel.storyPointsTotal + '</span>'
@@ -111,12 +110,13 @@ enhancedModel.storyPointsDone = 0;
 enhancedModel.storyPointsTotal = 0;
 enhancedModel.storyPointsRemaining = function () {
     return enhancedModel.storyPointsTotal - enhancedModel.storyPointsDone;
-};
+    };
+enhancedModel.backlogColumnKey = 0;  //ordinal number for backlog coloumn as we don't want to add storypoints from it into our totals.
+enhancedModel.swimlanes = {};
 
 $(document).ready(function () {
     $('div.member-header-content').append('<div class="points-total"></div>');
-    $('div#header-row').append('<div id="ultimateAwesome" style="color:white;margin-left:50px;float:left;">TFS KANBAN Enhancer</div>')
-        .append('<div id="storyPointsContainer"></div>');
+    $('div#header-row').append('<div id="storyPointsContainer"></div>');
     $('body').append('<div id="imageHolder"></div>');
     window.setTimeout(updateTasks, 5000);
 });
